@@ -1,0 +1,257 @@
+     1                                  BITS 16
+     2                                  ORG 0x7C00
+     3                                  
+     4                                  start:
+     5 00000000 FA                          cli
+     6 00000001 31C0                        xor ax, ax
+     7 00000003 8ED8                        mov ds, ax
+     8 00000005 8EC0                        mov es, ax
+     9 00000007 8ED0                        mov ss, ax
+    10 00000009 BC007C                      mov sp, 0x7C00
+    11 0000000C FB                          sti
+    12                                  
+    13 0000000D B81300                      mov ax, 0x0013
+    14 00000010 CD10                        int 0x10
+    15                                  
+    16 00000012 B800A0                      mov ax, 0xA000
+    17 00000015 8EC0                        mov es, ax
+    18                                  
+    19 00000017 C606[CD01]00                mov byte [mode], 0
+    20 0000001C C606[CE01]00                mov byte [selected], 0
+    21 00000021 E8A200                      call draw_ui
+    22                                  
+    23                                  key_loop:
+    24 00000024 30E4                        xor ah, ah
+    25 00000026 CD16                        int 0x16
+    26 00000028 80FC48                      cmp ah, 0x48
+    27 0000002B 740C                        je key_up
+    28 0000002D 80FC50                      cmp ah, 0x50
+    29 00000030 7417                        je key_down
+    30 00000032 80FC1C                      cmp ah, 0x1C
+    31 00000035 7422                        je key_enter
+    32 00000037 EBEB                        jmp key_loop
+    33                                  
+    34                                  key_up:
+    35 00000039 803E[CE01]00                cmp byte [selected], 0
+    36 0000003E 74E4                        je key_loop
+    37 00000040 FE0E[CE01]                  dec byte [selected]
+    38 00000044 E87F00                      call draw_ui
+    39 00000047 EBDB                        jmp key_loop
+    40                                  
+    41                                  key_down:
+    42 00000049 803E[CE01]02                cmp byte [selected], 2
+    43 0000004E 74D4                        je key_loop
+    44 00000050 FE06[CE01]                  inc byte [selected]
+    45 00000054 E86F00                      call draw_ui
+    46 00000057 EBCB                        jmp key_loop
+    47                                  
+    48                                  key_enter:
+    49 00000059 803E[CD01]00                cmp byte [mode], 0
+    50 0000005E 751C                        jne power_enter
+    51                                  
+    52 00000060 A0[CE01]                    mov al, [selected]
+    53 00000063 3C00                        cmp al, 0
+    54 00000065 7406                        je open_power
+    55 00000067 3C01                        cmp al, 1
+    56 00000069 741E                        je do_reboot
+    57 0000006B EB55                        jmp halt_forever
+    58                                  
+    59                                  open_power:
+    60 0000006D C606[CD01]01                mov byte [mode], 1
+    61 00000072 C606[CE01]00                mov byte [selected], 0
+    62 00000077 E84C00                      call draw_ui
+    63 0000007A EBA8                        jmp key_loop
+    64                                  
+    65                                  power_enter:
+    66 0000007C A0[CE01]                    mov al, [selected]
+    67 0000007F 3C00                        cmp al, 0
+    68 00000081 7406                        je do_reboot
+    69 00000083 3C01                        cmp al, 1
+    70 00000085 7409                        je do_shutdown
+    71 00000087 EB39                        jmp halt_forever
+    72                                  
+    73                                  do_reboot:
+    74 00000089 CD19                        int 0x19
+    75 0000008B EA0000FFFF                  jmp 0FFFFh:0000h
+    76                                  
+    77                                  do_shutdown:
+    78 00000090 B80153                      mov ax, 0x5301
+    79 00000093 31DB                        xor bx, bx
+    80 00000095 CD15                        int 0x15
+    81 00000097 B80E53                      mov ax, 0x530E
+    82 0000009A 31DB                        xor bx, bx
+    83 0000009C B90201                      mov cx, 0x0102
+    84 0000009F CD15                        int 0x15
+    85 000000A1 B80753                      mov ax, 0x5307
+    86 000000A4 BB0100                      mov bx, 0x0001
+    87 000000A7 B90300                      mov cx, 0x0003
+    88 000000AA CD15                        int 0x15
+    89                                  
+    90 000000AC B80020                      mov ax, 0x2000
+    91 000000AF BA0406                      mov dx, 0x0604
+    92 000000B2 EF                          out dx, ax
+    93 000000B3 BA0006                      mov dx, 0x0600
+    94 000000B6 EF                          out dx, ax
+    95 000000B7 BA04B0                      mov dx, 0xB004
+    96 000000BA EF                          out dx, ax
+    97 000000BB B80034                      mov ax, 0x3400
+    98 000000BE BA0440                      mov dx, 0x4004
+    99 000000C1 EF                          out dx, ax
+   100                                  
+   101                                  halt_forever:
+   102 000000C2 FA                          cli
+   103                                  .halt:
+   104 000000C3 F4                          hlt
+   105 000000C4 EBFD                        jmp .halt
+   106                                  
+   107                                  draw_ui:
+   108 000000C6 31FF                        xor di, di
+   109 000000C8 B001                        mov al, 0x01
+   110 000000CA B900FA                      mov cx, 320*200
+   111 000000CD F3AA                        rep stosb
+   112                                  
+   113 000000CF 31FF                        xor di, di
+   114 000000D1 B009                        mov al, 0x09
+   115 000000D3 B90019                      mov cx, 320*20
+   116 000000D6 F3AA                        rep stosb
+   117                                  
+   118 000000D8 B83800                      mov ax, 56
+   119 000000DB BB3800                      mov bx, 56
+   120 000000DE B9D000                      mov cx, 208
+   121 000000E1 BA5800                      mov dx, 88
+   122 000000E4 C606[CF01]03                mov byte [draw_color], 0x03
+   123 000000E9 E8BE00                      call fill_rect
+   124                                  
+   125 000000EC 31C0                        xor ax, ax
+   126 000000EE A0[CE01]                    mov al, [selected]
+   127 000000F1 C1E004                      shl ax, 4
+   128 000000F4 83C04E                      add ax, 78
+   129 000000F7 BB4800                      mov bx, 72
+   130 000000FA B9B000                      mov cx, 176
+   131 000000FD BA0E00                      mov dx, 14
+   132 00000100 C606[CF01]0C                mov byte [draw_color], 0x0C
+   133 00000105 E8A200                      call fill_rect
+   134                                  
+   135 00000108 B600                        mov dh, 0
+   136 0000010A B201                        mov dl, 1
+   137 0000010C B30F                        mov bl, 0x0F
+   138 0000010E BE[D001]                    mov si, title
+   139 00000111 E87700                      call print_at
+   140                                  
+   141 00000114 803E[CD01]00                cmp byte [mode], 0
+   142 00000119 752B                        jne draw_power
+   143                                  
+   144 0000011B B605                        mov dh, 5
+   145 0000011D B20A                        mov dl, 10
+   146 0000011F B30E                        mov bl, 0x0E
+   147 00000121 BE[D301]                    mov si, main_title
+   148 00000124 E86400                      call print_at
+   149                                  
+   150 00000127 B000                        mov al, 0
+   151 00000129 B60A                        mov dh, 10
+   152 0000012B BE[D501]                    mov si, main_1
+   153 0000012E E84000                      call draw_item
+   154 00000131 B001                        mov al, 1
+   155 00000133 B60C                        mov dh, 12
+   156 00000135 BE[DB01]                    mov si, main_2
+   157 00000138 E83600                      call draw_item
+   158 0000013B B002                        mov al, 2
+   159 0000013D B60E                        mov dh, 14
+   160 0000013F BE[E201]                    mov si, main_3
+   161 00000142 E82C00                      call draw_item
+   162 00000145 C3                          ret
+   163                                  
+   164                                  draw_power:
+   165 00000146 B605                        mov dh, 5
+   166 00000148 B20A                        mov dl, 10
+   167 0000014A B30E                        mov bl, 0x0E
+   168 0000014C BE[E701]                    mov si, power_title
+   169 0000014F E83900                      call print_at
+   170                                  
+   171 00000152 B000                        mov al, 0
+   172 00000154 B60A                        mov dh, 10
+   173 00000156 BE[E901]                    mov si, pow_1
+   174 00000159 E81500                      call draw_item
+   175 0000015C B001                        mov al, 1
+   176 0000015E B60C                        mov dh, 12
+   177 00000160 BE[F001]                    mov si, pow_2
+   178 00000163 E80B00                      call draw_item
+   179 00000166 B002                        mov al, 2
+   180 00000168 B60E                        mov dh, 14
+   181 0000016A BE[F401]                    mov si, pow_3
+   182 0000016D E80100                      call draw_item
+   183 00000170 C3                          ret
+   184                                  
+   185                                  draw_item:
+   186 00000171 56                          push si
+   187 00000172 3A06[CE01]                  cmp al, [selected]
+   188 00000176 750A                        jne .text
+   189 00000178 B208                        mov dl, 8
+   190 0000017A B30F                        mov bl, 0x0F
+   191 0000017C BE[F901]                    mov si, ptr_arrow
+   192 0000017F E80900                      call print_at
+   193                                  .text:
+   194 00000182 5E                          pop si
+   195 00000183 B20A                        mov dl, 10
+   196 00000185 B30F                        mov bl, 0x0F
+   197 00000187 E80100                      call print_at
+   198 0000018A C3                          ret
+   199                                  
+   200                                  print_at:
+   201                                      ; DH=row, DL=col, BL=color, SI=string
+   202 0000018B B402                        mov ah, 0x02
+   203 0000018D B700                        mov bh, 0x00
+   204 0000018F CD10                        int 0x10
+   205                                  .next:
+   206 00000191 AC                          lodsb
+   207 00000192 84C0                        test al, al
+   208 00000194 7413                        jz .done
+   209 00000196 B40A                        mov ah, 0x0A          ; character-only write (no black cell fill)
+   210 00000198 B700                        mov bh, 0x00
+   211 0000019A B90100                      mov cx, 0x0001
+   212 0000019D CD10                        int 0x10
+   213 0000019F FEC2                        inc dl
+   214 000001A1 B402                        mov ah, 0x02
+   215 000001A3 B700                        mov bh, 0x00
+   216 000001A5 CD10                        int 0x10
+   217 000001A7 EBE8                        jmp .next
+   218                                  .done:
+   219 000001A9 C3                          ret
+   220                                  
+   221                                  fill_rect:
+   222 000001AA 55                          push bp
+   223 000001AB 89CD                        mov bp, cx
+   224 000001AD 89C6                        mov si, ax
+   225 000001AF C1E008                      shl ax, 8
+   226 000001B2 C1E606                      shl si, 6
+   227 000001B5 01F0                        add ax, si
+   228 000001B7 01D8                        add ax, bx
+   229 000001B9 89C7                        mov di, ax
+   230                                  .row:
+   231 000001BB 89E9                        mov cx, bp
+   232 000001BD A0[CF01]                    mov al, [draw_color]
+   233 000001C0 F3AA                        rep stosb
+   234 000001C2 81C74001                    add di, 320
+   235 000001C6 29EF                        sub di, bp
+   236 000001C8 4A                          dec dx
+   237 000001C9 75F0                        jnz .row
+   238 000001CB 5D                          pop bp
+   239 000001CC C3                          ret
+   240                                  
+   241 000001CD 00                      mode       db 0
+   242 000001CE 00                      selected   db 0
+   243 000001CF 00                      draw_color db 0
+   244                                  
+   245 000001D0 533200                  title      db 'S2', 0
+   246 000001D3 4D00                    main_title db 'M', 0
+   247 000001D5 506F77657200            main_1     db 'Power', 0
+   248 000001DB 5265626F6F7400          main_2     db 'Reboot', 0
+   249 000001E2 48616C7400              main_3     db 'Halt', 0
+   250 000001E7 5000                    power_title db 'P', 0
+   251 000001E9 5265626F6F7400          pow_1      db 'Reboot', 0
+   252 000001F0 4F666600                pow_2      db 'Off', 0
+   253 000001F4 48616C7400              pow_3      db 'Halt', 0
+   254 000001F9 3E00                    ptr_arrow  db '>', 0
+   255                                  
+   256 000001FB 00<rep 3h>              times 510-($-$$) db 0
+   257 000001FE 55AA                    dw 0xAA55
