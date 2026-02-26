@@ -10,7 +10,7 @@ Minimal bootable OS starter using only x86 assembly, split into:
 - `build_iso.bat`: builds binaries and writes a bootable floppy image
 
 ## Requirements
-- `D:\nasm\nasm.exe`
+- `D:\nasm\nasm.exe` (May differ, that's just my dir. Change the "ASM_EXE" to your NASM directory.)
 
 ## Build
 ```bat
